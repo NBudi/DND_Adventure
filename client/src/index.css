@@ -161,6 +161,45 @@ body {
 .dice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
 .btn-dice  { padding: 10px 4px; font-size: 13px; font-weight: bold; background: var(--card); border-color: var(--border); }
 .btn-dice:hover { border-color: var(--gold); color: var(--gold); }
+.btn-dice:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--border); color: var(--text-muted); }
+
+/* Dice animation */
+.dice-anim-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.18s ease, margin-bottom 0.18s ease;
+  margin-bottom: 0;
+}
+.dice-anim-wrap.rolling {
+  max-height: 80px;
+  margin-bottom: 12px;
+}
+.dice-face {
+  width: 58px;
+  height: 58px;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: bold;
+  color: var(--gold);
+  font-family: 'Courier New', monospace;
+  animation: dice-wobble 0.14s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(201,148,58,.25);
+}
+.dice-anim-wrap:not(.rolling) .dice-face { animation: none; }
+
+@keyframes dice-wobble {
+  0%   { transform: rotate(-10deg) scale(0.95); }
+  50%  { transform: rotate(10deg)  scale(1.05); }
+  100% { transform: rotate(-10deg) scale(0.95); }
+}
 
 /* Roll form */
 .roll-form        { display: flex; gap: 8px; }

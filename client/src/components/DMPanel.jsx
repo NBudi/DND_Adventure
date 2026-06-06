@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import socket from '../socket'
 
 export default function DMPanel({ hiddenRolls, onClearHidden }) {
@@ -7,11 +7,30 @@ export default function DMPanel({ hiddenRolls, onClearHidden }) {
   const [notation, setNotation] = useState('')
   const [announce, setAnnounce] = useState('')
   const [error,    setError]    = useState('')
+  const [rolling,  setRolling]  = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const cooldownRef = useRef(null)
+
+  useEffect(() => () => clearInterval(cooldownRef.current), [])
+
+  function startCooldown() {
+    setRolling(true)
+    setCooldown(3)
+    let rem = 3
+    cooldownRef.current = setInterval(() => {
+      rem -= 1
+      setCooldown(rem)
+      if (rem <= 0) {
+        clearInterval(cooldownRef.current)
+        setRolling(false)
+      }
+    }, 1000)
+  }
 
   function handleRoll(e) {
     e.preventDefault()
     const val = notation.trim()
-    if (!val) return
+    if (!val || rolling) return
     setError('')
     if (mode === 'hidden') {
       socket.emit('roll-hidden', { notation: val, npcName: npcName.trim() || null })
@@ -19,6 +38,7 @@ export default function DMPanel({ hiddenRolls, onClearHidden }) {
       socket.emit('roll', { notation: val, npcName: npcName.trim() || null })
     }
     setNotation('')
+    startCooldown()
   }
 
   function handleReveal(id) {
@@ -73,10 +93,11 @@ export default function DMPanel({ hiddenRolls, onClearHidden }) {
           autoComplete="off"
           spellCheck="false"
           value={notation}
+          disabled={rolling}
           onChange={e => { setNotation(e.target.value); setError('') }}
         />
-        <button type="submit" className={`btn ${mode === 'hidden' ? 'btn-dm' : 'btn-primary'}`}>
-          {mode === 'hidden' ? 'Hide' : 'Roll'}
+        <button type="submit" className={`btn ${mode === 'hidden' ? 'btn-dm' : 'btn-primary'}`} disabled={rolling}>
+          {rolling ? `${cooldown}s` : (mode === 'hidden' ? 'Hide' : 'Roll')}
         </button>
       </form>
 
