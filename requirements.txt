@@ -1,0 +1,6 @@
+# Core dependencies
+rich>=13.0.0          # Beautiful terminal output
+colorama>=0.4.6       # Cross-platform terminal colors
+
+# Optional AI integration
+anthropic>=0.55.0     # Claude API for NPC dialogue / DM narration
