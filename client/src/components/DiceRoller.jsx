@@ -2,13 +2,17 @@ import { useState, useRef, useEffect } from 'react'
 
 const DICE = [4, 6, 8, 10, 12, 20, 100]
 
-export default function DiceRoller({ onRoll, error, onClearError }) {
+export default function DiceRoller({ onRoll, error, onClearError, lastTotal }) {
   const [notation,  setNotation]  = useState('')
   const [rolling,   setRolling]   = useState(false)
   const [cooldown,  setCooldown]  = useState(0)
   const [dispNum,   setDispNum]   = useState(20)
-  const cycleRef    = useRef(null)
-  const cooldownRef = useRef(null)
+  const cycleRef      = useRef(null)
+  const cooldownRef   = useRef(null)
+  const lastTotalRef  = useRef(null)
+
+  // Keep ref in sync with prop so the settle timeout can read the latest value
+  useEffect(() => { lastTotalRef.current = lastTotal }, [lastTotal])
 
   useEffect(() => () => {
     clearInterval(cycleRef.current)
@@ -17,14 +21,18 @@ export default function DiceRoller({ onRoll, error, onClearError }) {
 
   function triggerRoll(notation) {
     if (rolling) return
+    lastTotalRef.current = null   // clear stale result from previous roll
     onRoll(notation)
 
-    // Cycle numbers rapidly for 1.4 s
+    // Cycle numbers rapidly for 1.4 s, then snap to actual result
     setDispNum(Math.ceil(Math.random() * 20))
     cycleRef.current = setInterval(() => {
       setDispNum(Math.ceil(Math.random() * 20))
     }, 75)
-    setTimeout(() => clearInterval(cycleRef.current), 1400)
+    setTimeout(() => {
+      clearInterval(cycleRef.current)
+      if (lastTotalRef.current !== null) setDispNum(lastTotalRef.current)
+    }, 1400)
 
     // 3-second cooldown countdown
     setRolling(true)

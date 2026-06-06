@@ -20,8 +20,10 @@ export default function Room() {
   const [dmName,      setDmName]      = useState(null)
   const [isDM,        setIsDM]        = useState(false)
   const [hiddenRolls, setHiddenRolls] = useState([])
+  const [lastTotal,   setLastTotal]   = useState(null)
 
-  const joined = useRef(false)
+  const joined    = useRef(false)
+  const myNameRef = useRef(requestedName)
 
   useEffect(() => {
     if (joined.current) return
@@ -32,13 +34,17 @@ export default function Room() {
 
     socket.on('init', ({ you, players, log, dm }) => {
       setMyName(you)
+      myNameRef.current = you
       setPlayers(players)
       setLog(log)
       setDmName(dm)
       if (dm === you) setIsDM(true)
     })
 
-    socket.on('roll:result', entry => setLog(prev => [...prev, entry]))
+    socket.on('roll:result', entry => {
+      setLog(prev => [...prev, entry])
+      if (entry.player === myNameRef.current) setLastTotal(entry.total)
+    })
 
     socket.on('system', ({ msg, players, ts, type }) => {
       if (players) setPlayers(players)
@@ -79,6 +85,7 @@ export default function Room() {
 
   function sendRoll(notation) {
     setError('')
+    setLastTotal(null)
     socket.emit('roll', { notation })
   }
 
@@ -136,12 +143,12 @@ export default function Room() {
 
           {isDM
             ? <DMPanel hiddenRolls={hiddenRolls} />
-            : <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} />
+            : <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} lastTotal={lastTotal} />
           }
 
           {isDM && (
             <div className="section">
-              <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} />
+              <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} lastTotal={lastTotal} />
             </div>
           )}
         </aside>
