@@ -1,49 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import socket from '../socket'
 
-export default function DMPanel({ hiddenRolls, onClearHidden }) {
-  const [mode,     setMode]     = useState('hidden')   // 'hidden' | 'public'
-  const [npcName,  setNpcName]  = useState('')
-  const [notation, setNotation] = useState('')
+export default function DMPanel() {
   const [announce, setAnnounce] = useState('')
-  const [error,    setError]    = useState('')
-  const [rolling,  setRolling]  = useState(false)
-  const [cooldown, setCooldown] = useState(0)
-  const cooldownRef = useRef(null)
-
-  useEffect(() => () => clearInterval(cooldownRef.current), [])
-
-  function startCooldown() {
-    setRolling(true)
-    setCooldown(3)
-    let rem = 3
-    cooldownRef.current = setInterval(() => {
-      rem -= 1
-      setCooldown(rem)
-      if (rem <= 0) {
-        clearInterval(cooldownRef.current)
-        setRolling(false)
-      }
-    }, 1000)
-  }
-
-  function handleRoll(e) {
-    e.preventDefault()
-    const val = notation.trim()
-    if (!val || rolling) return
-    setError('')
-    if (mode === 'hidden') {
-      socket.emit('roll-hidden', { notation: val, npcName: npcName.trim() || null })
-    } else {
-      socket.emit('roll', { notation: val, npcName: npcName.trim() || null })
-    }
-    setNotation('')
-    startCooldown()
-  }
-
-  function handleReveal(id) {
-    socket.emit('reveal-roll', { id })
-  }
 
   function handleAnnounce(e) {
     e.preventDefault()
@@ -63,67 +22,6 @@ export default function DMPanel({ hiddenRolls, onClearHidden }) {
     <section className="section dm-panel">
       <div className="section-title dm-title">⚔ Dungeon Master</div>
 
-      {/* Roll mode toggle */}
-      <div className="dm-toggle">
-        <button
-          className={`btn dm-toggle-btn ${mode === 'hidden' ? 'active' : ''}`}
-          onClick={() => setMode('hidden')}
-        >Hidden Roll</button>
-        <button
-          className={`btn dm-toggle-btn ${mode === 'public' ? 'active' : ''}`}
-          onClick={() => setMode('public')}
-        >Public Roll</button>
-      </div>
-
-      {/* NPC name */}
-      <input
-        className="input"
-        style={{ marginBottom: '6px', fontSize: '13px' }}
-        placeholder="NPC / Monster name (optional)"
-        value={npcName}
-        onChange={e => setNpcName(e.target.value)}
-      />
-
-      {/* Roll form */}
-      <form className="roll-form" onSubmit={handleRoll}>
-        <input
-          className="input"
-          type="text"
-          placeholder="e.g. 2d6+3"
-          autoComplete="off"
-          spellCheck="false"
-          value={notation}
-          disabled={rolling}
-          onChange={e => { setNotation(e.target.value); setError('') }}
-        />
-        <button type="submit" className={`btn ${mode === 'hidden' ? 'btn-dm' : 'btn-primary'}`} disabled={rolling}>
-          {rolling ? `${cooldown}s` : (mode === 'hidden' ? 'Hide' : 'Roll')}
-        </button>
-      </form>
-
-      {error && <div className="error-msg">{error}</div>}
-
-      {/* Hidden rolls list */}
-      {hiddenRolls.length > 0 && (
-        <div className="hidden-rolls">
-          <div className="dm-sub-label">Hidden Rolls</div>
-          {hiddenRolls.map(r => (
-            <div key={r.id} className="hidden-roll-row">
-              <span className="ts">{r.ts}</span>
-              {r.npcName && <span className="hidden-npc">{r.npcName} · </span>}
-              <span className="log-notation">{r.notation}</span>
-              <span className="log-arrow"> → </span>
-              <span className="log-total">{r.total}</span>
-              <span className="hidden-breakdown"> ({r.breakdown})</span>
-              <button className="btn btn-reveal" onClick={() => handleReveal(r.id)}>Reveal</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="dm-divider" />
-
-      {/* Announcement */}
       <div className="dm-sub-label">Announcement</div>
       <form onSubmit={handleAnnounce}>
         <textarea
@@ -140,7 +38,6 @@ export default function DMPanel({ hiddenRolls, onClearHidden }) {
 
       <div className="dm-divider" />
 
-      {/* Clear log */}
       <button className="btn btn-danger" style={{ width: '100%' }} onClick={handleClearLog}>
         Clear Roll Log
       </button>

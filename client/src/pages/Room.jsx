@@ -78,6 +78,7 @@ export default function Room() {
 
     socket.on('roll:hidden', entry => {
       setHiddenRolls(prev => [...prev, entry])
+      setLastTotal(entry.total)
     })
 
     socket.on('hidden-removed', ({ id }) => {
@@ -109,6 +110,16 @@ export default function Room() {
     setError('')
     setLastTotal(null)
     socket.emit('roll', { notation })
+  }
+
+  function sendHiddenRoll(notation, npcName) {
+    setError('')
+    setLastTotal(null)
+    socket.emit('roll-hidden', { notation, npcName })
+  }
+
+  function handleReveal(id) {
+    socket.emit('reveal-roll', { id })
   }
 
   function claimDM() {
@@ -164,16 +175,14 @@ export default function Room() {
             </div>
           )}
 
-          {isDM
-            ? <DMPanel hiddenRolls={hiddenRolls} />
-            : <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} lastTotal={lastTotal} />
-          }
-
-          {isDM && (
-            <div className="section">
-              <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} lastTotal={lastTotal} />
-            </div>
-          )}
+          {isDM && <DMPanel />}
+          <DiceRoller
+            onRoll={sendRoll}
+            onHiddenRoll={isDM ? sendHiddenRoll : undefined}
+            error={error}
+            onClearError={() => setError('')}
+            lastTotal={lastTotal}
+          />
         </aside>
 
         <section className="panel-right">
@@ -182,7 +191,12 @@ export default function Room() {
               Roll Log
             </div>
           </div>
-          <RollLog entries={log} myName={myName} />
+          <RollLog
+            entries={log}
+            myName={myName}
+            hiddenRolls={isDM ? hiddenRolls : []}
+            onReveal={isDM ? handleReveal : undefined}
+          />
         </section>
       </div>
 

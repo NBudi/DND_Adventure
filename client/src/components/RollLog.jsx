@@ -1,15 +1,38 @@
 import { useEffect, useRef } from 'react'
 
-export default function RollLog({ entries, myName }) {
+export default function RollLog({ entries, myName, hiddenRolls = [], onReveal }) {
   const bottomRef = useRef(null)
+
+  const allEntries = [
+    ...entries.map(e => ({ ...e, _hidden: false })),
+    ...hiddenRolls.map(r => ({ ...r, _hidden: true })),
+  ].sort((a, b) => (a.ts || '').localeCompare(b.ts || ''))
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [entries])
+  }, [allEntries.length])
 
   return (
     <div className="log-body">
-      {entries.map((entry, i) => {
+      {allEntries.map((entry, i) => {
+        if (entry._hidden) {
+          return (
+            <div key={`h-${entry.id}`} className="log-entry log-hidden">
+              <span className="ts">{entry.ts}</span>
+              <span className="log-player">{entry.npcName || '[DM]'}</span>
+              <span className="log-action"> rolled </span>
+              <span className="log-notation">{entry.notation}</span>
+              <span className="log-arrow"> &rarr; </span>
+              <span className="log-total">{entry.total}</span>
+              {entry.breakdown && <span className="log-breakdown"> ({entry.breakdown})</span>}
+              <span className="hidden-badge">HIDDEN</span>
+              {onReveal && (
+                <button className="btn btn-reveal" onClick={() => onReveal(entry.id)}>Reveal</button>
+              )}
+            </div>
+          )
+        }
+
         if (entry.type === 'announce') {
           return (
             <div key={i} className="log-entry announce">
