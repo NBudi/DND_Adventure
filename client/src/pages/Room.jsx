@@ -42,6 +42,19 @@ export default function Room() {
       setLog(log)
       setDmName(dm)
       if (dm === you) setIsDM(true)
+
+      const myUsername = sessionStorage.getItem('playerUsername')
+      fetch('/api/characters')
+        .then(r => r.json())
+        .then(list => {
+          const map = {}
+          list.forEach(c => { if (c.playerName) map[c.playerName] = c })
+          // Ensure own character is mapped to actual room name (handles display-name mismatches)
+          const mine = list.find(c => c.username === myUsername)
+          if (mine) map[you] = mine
+          setCharacters(map)
+        })
+        .catch(() => {})
     })
 
     socket.on('roll:result', entry => {
@@ -85,17 +98,6 @@ export default function Room() {
       joined.current = false
     }
   }, [roomCode, requestedName])
-
-  useEffect(() => {
-    fetch('/api/characters')
-      .then(r => r.json())
-      .then(list => {
-        const map = {}
-        list.forEach(c => { if (c.playerName) map[c.playerName] = c })
-        setCharacters(map)
-      })
-      .catch(() => {})
-  }, [])
 
   function sendRoll(notation) {
     setError('')
