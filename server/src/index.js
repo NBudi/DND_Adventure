@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { getOrCreate, removePlayer, addToLog, defaultMap, NPC_COLORS } = require('./rooms');
+const { getOrCreate, getRoom, removePlayer, addToLog, defaultMap, NPC_COLORS } = require('./rooms');
 const { parseAndRoll } = require('./dice');
 const { validateLogin, signUp } = require('./auth');
 const { getCharacters, saveCharacters } = require('./characters');
@@ -249,7 +249,8 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (!currentRoom || !currentName) return;
-    const room = getOrCreate(currentRoom);
+    const room = getRoom(currentRoom);
+    if (!room) return;
     const wasDM = room.dm === currentName;
     // Remove player's token from the map
     if (room.map) {

@@ -43,4 +43,8 @@ function addToLog(room, entry) {
   if (room.log.length > MAX_LOG) room.log.shift();
 }
 
-module.exports = { getOrCreate, removePlayer, addToLog, defaultMap, NPC_COLORS };
+function getRoom(code) {
+  return rooms[code] || null;
+}
+
+module.exports = { getOrCreate, getRoom, removePlayer, addToLog, defaultMap, NPC_COLORS };
