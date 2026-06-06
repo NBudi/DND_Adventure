@@ -6,6 +6,7 @@ const { getOrCreate, getRoom, removePlayer, addToLog, defaultMap, NPC_COLORS } =
 const { parseAndRoll } = require('./dice');
 const { validateLogin, signUp } = require('./auth');
 const { getCharacters, saveCharacters } = require('./characters');
+const redis = require('./redis');
 
 const app = express();
 const server = http.createServer(app);
@@ -41,6 +42,13 @@ app.post('/api/characters/:username', async (req, res) => {
   await saveCharacters(req.params.username, chars);
   res.json({ ok: true });
 });
+
+app.delete('/api/admin/wipe', async (_req, res) => {
+  await redis('DEL', 'players')
+  await redis('DEL', 'chars')
+  await redis('DEL', 'characters')
+  res.json({ ok: true, msg: 'All accounts and characters deleted.' })
+})
 
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../../client/dist');
