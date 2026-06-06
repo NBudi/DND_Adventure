@@ -8,6 +8,7 @@ import DMPanel from '../components/DMPanel'
 import CharacterModal from '../components/CharacterModal'
 import MapPanel from '../components/MapPanel'
 import NPCPanel from '../components/NPCPanel'
+import PartyPanel from '../components/PartyPanel'
 
 export default function Room() {
   const { code }      = useParams()
@@ -208,6 +209,8 @@ export default function Room() {
             lastTotal={lastTotal}
           />
         </aside>
+
+        <PartyPanel players={players} dmName={dmName} characters={characters} />
 
         <section className="panel-right">
           <div className="log-header">
