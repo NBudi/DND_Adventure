@@ -5,6 +5,7 @@ import PlayerList from '../components/PlayerList'
 import DiceRoller from '../components/DiceRoller'
 import RollLog from '../components/RollLog'
 import DMPanel from '../components/DMPanel'
+import CharacterModal from '../components/CharacterModal'
 
 export default function Room() {
   const { code }      = useParams()
@@ -21,6 +22,8 @@ export default function Room() {
   const [isDM,        setIsDM]        = useState(false)
   const [hiddenRolls, setHiddenRolls] = useState([])
   const [lastTotal,   setLastTotal]   = useState(null)
+  const [characters,  setCharacters]  = useState({})
+  const [viewingChar, setViewingChar] = useState(null)
 
   const joined    = useRef(false)
   const myNameRef = useRef(requestedName)
@@ -83,6 +86,17 @@ export default function Room() {
     }
   }, [roomCode, requestedName])
 
+  useEffect(() => {
+    fetch('/api/characters')
+      .then(r => r.json())
+      .then(list => {
+        const map = {}
+        list.forEach(c => { if (c.playerName) map[c.playerName] = c })
+        setCharacters(map)
+      })
+      .catch(() => {})
+  }, [])
+
   function sendRoll(notation) {
     setError('')
     setLastTotal(null)
@@ -111,6 +125,7 @@ export default function Room() {
 
   return (
     <div className="room-body">
+      <CharacterModal char={viewingChar} onClose={() => setViewingChar(null)} />
       <header className="header">
         <div className="room-info">
           <span className="label">Room</span>
@@ -131,7 +146,7 @@ export default function Room() {
 
       <div className="room-layout">
         <aside className="panel-left">
-          <PlayerList players={players} myName={myName} dmName={dmName} />
+          <PlayerList players={players} myName={myName} dmName={dmName} characters={characters} onViewChar={setViewingChar} />
 
           {!dmName && !isDM && (
             <div className="section">

@@ -1,4 +1,4 @@
-export default function PlayerList({ players, myName, dmName }) {
+export default function PlayerList({ players, myName, dmName, characters, onViewChar }) {
   return (
     <section className="section">
       <div className="section-title">Players Online</div>
@@ -6,8 +6,13 @@ export default function PlayerList({ players, myName, dmName }) {
         {players.map(p => (
           <li key={p} className={`player-item${p === myName ? ' me' : ''}`}>
             <span className="online-dot" />
-            {p}{p === myName ? ' (you)' : ''}
+            <span className="player-name">{p}{p === myName ? ' (you)' : ''}</span>
             {p === dmName && <span className="dm-crown"> ⚔</span>}
+            {characters?.[p] && (
+              <button className="btn btn-icon sheet-btn" onClick={() => onViewChar(characters[p])}>
+                Sheet
+              </button>
+            )}
           </li>
         ))}
       </ul>

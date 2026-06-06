@@ -16,4 +16,9 @@ async function signUp(username, password, name) {
   return { ok: true, name: name.trim() }
 }
 
-module.exports = { validateLogin, signUp }
+async function getPlayerName(username) {
+  const raw = await redis('HGET', 'players', username.trim().toLowerCase())
+  return raw ? JSON.parse(raw).name : null
+}
+
+module.exports = { validateLogin, signUp, getPlayerName }

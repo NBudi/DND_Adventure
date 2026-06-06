@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { getOrCreate, removePlayer, addToLog } = require('./rooms');
 const { parseAndRoll } = require('./dice');
-const { validateLogin, signUp } = require('./auth');
+const { validateLogin, signUp, getPlayerName } = require('./auth');
 const { getCharacter, saveCharacter, getAllCharacters } = require('./characters');
 
 const app = express();
@@ -31,7 +31,12 @@ app.post('/api/signup', async (req, res) => {
 });
 
 app.get('/api/characters', async (_req, res) => {
-  res.json(await getAllCharacters());
+  const chars = await getAllCharacters();
+  const enriched = await Promise.all(chars.map(async c => ({
+    ...c,
+    playerName: await getPlayerName(c.username),
+  })));
+  res.json(enriched);
 });
 
 app.get('/api/character/:username', async (req, res) => {
