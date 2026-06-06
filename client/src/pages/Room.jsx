@@ -7,6 +7,7 @@ import RollLog from '../components/RollLog'
 import DMPanel from '../components/DMPanel'
 import CharacterModal from '../components/CharacterModal'
 import MapPanel from '../components/MapPanel'
+import NPCPanel from '../components/NPCPanel'
 
 export default function Room() {
   const { code }      = useParams()
@@ -26,6 +27,7 @@ export default function Room() {
   const [characters,  setCharacters]  = useState({})
   const [viewingChar, setViewingChar] = useState(null)
   const [map,         setMap]         = useState(null)
+  const [npcs,        setNpcs]        = useState([])
 
   const joined    = useRef(false)
   const myNameRef = useRef(requestedName)
@@ -37,7 +39,7 @@ export default function Room() {
     socket.connect()
     socket.emit('join', { roomCode, playerName: requestedName })
 
-    socket.on('init', ({ you, players, log, dm, map }) => {
+    socket.on('init', ({ you, players, log, dm, map, npcs }) => {
       setMyName(you)
       myNameRef.current = you
       setPlayers(players)
@@ -45,6 +47,7 @@ export default function Room() {
       setDmName(dm)
       if (dm === you) setIsDM(true)
       setMap(map)
+      setNpcs(npcs || [])
 
       const myUsername = sessionStorage.getItem('playerUsername')
       fetch('/api/characters')
@@ -88,6 +91,7 @@ export default function Room() {
     socket.on('log:cleared', () => setLog([]))
 
     socket.on('map:state', setMap)
+    socket.on('npc:state', setNpcs)
 
     socket.on('error', ({ msg }) => setError(msg))
 
@@ -100,6 +104,7 @@ export default function Room() {
       socket.off('hidden-removed')
       socket.off('log:cleared')
       socket.off('map:state')
+      socket.off('npc:state')
       socket.off('error')
       socket.disconnect()
       joined.current = false
@@ -175,6 +180,7 @@ export default function Room() {
             </div>
           )}
 
+          {isDM && <NPCPanel npcs={npcs} />}
           {isDM && <DMPanel />}
           <DiceRoller
             onRoll={sendRoll}
@@ -200,7 +206,7 @@ export default function Room() {
         </section>
       </div>
 
-      {(isDM || map) && <MapPanel map={map} isDM={isDM} />}
+      {(isDM || map) && <MapPanel map={map} isDM={isDM} players={players} npcs={npcs} />}
     </div>
   )
 }

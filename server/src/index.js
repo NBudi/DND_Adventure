@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { getOrCreate, removePlayer, addToLog, defaultMap } = require('./rooms');
+const { getOrCreate, removePlayer, addToLog, defaultMap, NPC_COLORS } = require('./rooms');
 const { parseAndRoll } = require('./dice');
 const { validateLogin, signUp, getPlayerName } = require('./auth');
 const { getCharacter, saveCharacter, getAllCharacters } = require('./characters');
@@ -75,7 +75,7 @@ io.on('connection', (socket) => {
     socket.join(code);
     room.players.push(name);
 
-    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm, map: room.map });
+    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm, map: room.map, npcs: room.npcs });
     socket.to(code).emit('system', { msg: `${name} joined the room`, players: room.players, ts: ts() });
   });
 
@@ -96,6 +96,35 @@ io.on('connection', (socket) => {
     } catch (err) {
       socket.emit('error', { msg: err.message });
     }
+  });
+
+  // ── NPC events ───────────────────────────────
+
+  socket.on('npc:add', ({ name }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    const nm = String(name || '').trim().slice(0, 30);
+    if (!nm) return;
+    const color = NPC_COLORS[room.npcCounter % NPC_COLORS.length];
+    const npc = { id: ++room.npcCounter, name: nm, color };
+    room.npcs.push(npc);
+    io.to(currentRoom).emit('npc:state', room.npcs);
+  });
+
+  socket.on('npc:remove', ({ id }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    const nid = Number(id);
+    room.npcs = room.npcs.filter(n => n.id !== nid);
+    if (room.map) {
+      room.map.cells.forEach(c => {
+        if (c.token?.type === 'npc' && c.token.id === nid) c.token = null;
+      });
+      io.to(currentRoom).emit('map:state', room.map);
+    }
+    io.to(currentRoom).emit('npc:state', room.npcs);
   });
 
   // ── Map events ───────────────────────────────
@@ -126,6 +155,29 @@ io.on('connection', (socket) => {
     const i = Number(index);
     if (!Number.isInteger(i) || i < 0 || i >= room.map.cells.length) return;
     room.map.cells[i].revealed = Boolean(revealed);
+    io.to(currentRoom).emit('map:state', room.map);
+  });
+
+  socket.on('map:place-token', ({ index, token }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName || !room.map) return;
+    const i = Number(index);
+    if (!Number.isInteger(i) || i < 0 || i >= room.map.cells.length) return;
+    if (token) {
+      // Move token — clear its previous location first
+      room.map.cells.forEach((c, ci) => {
+        if (ci !== i && c.token?.type === token.type && String(c.token.id) === String(token.id)) c.token = null;
+      });
+      room.map.cells[i].token = {
+        type: token.type,
+        id: token.id,
+        name: String(token.name || '').slice(0, 30),
+        color: String(token.color || '#888').slice(0, 20),
+      };
+    } else {
+      room.map.cells[i].token = null;
+    }
     io.to(currentRoom).emit('map:state', room.map);
   });
 
@@ -206,6 +258,14 @@ io.on('connection', (socket) => {
     if (!currentRoom || !currentName) return;
     const room = getOrCreate(currentRoom);
     const wasDM = room.dm === currentName;
+    // Remove player's token from the map
+    if (room.map) {
+      let changed = false;
+      room.map.cells.forEach(c => {
+        if (c.token?.type === 'player' && c.token.id === currentName) { c.token = null; changed = true; }
+      });
+      if (changed) io.to(currentRoom).emit('map:state', room.map);
+    }
     removePlayer(room, currentName);
     io.to(currentRoom).emit('system', { msg: `${currentName} left the room`, players: room.players, ts: ts() });
     if (wasDM) io.to(currentRoom).emit('dm-update', { dm: null, players: room.players });
