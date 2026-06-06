@@ -10,17 +10,19 @@ function skillLabel(key) {
 }
 
 export default function PartyPanel({ players, dmName, characters }) {
-  const party = players.filter(p => p !== dmName)
-  if (party.length === 0) return null
+  if (players.length === 0) return null
 
   return (
     <div className="panel-party">
       <div className="section-title">Party</div>
-      {party.map(name => {
+      {players.map(name => {
         const char = characters[name]
         if (!char) return (
           <div key={name} className="party-card">
-            <div className="party-card-name">{name}</div>
+            <div className="party-card-name">
+              {name}
+              {name === dmName && <span className="party-dm-badge">DM</span>}
+            </div>
             <div className="party-no-sheet">No character sheet</div>
           </div>
         )
@@ -31,7 +33,10 @@ export default function PartyPanel({ players, dmName, characters }) {
 
         return (
           <div key={name} className="party-card">
-            <div className="party-card-name">{char.characterName || name}</div>
+            <div className="party-card-name">
+              {char.characterName || name}
+              {name === dmName && <span className="party-dm-badge">DM</span>}
+            </div>
             {char.characterName && <div className="party-card-sub">{name}</div>}
             <div className="party-card-meta">{char.race} {char.class} {char.level && `Lv${char.level}`}</div>
 

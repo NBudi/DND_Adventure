@@ -165,6 +165,7 @@ body {
 .party-card-sub  { font-size: 11px; color: var(--muted); margin-bottom: 1px; }
 .party-card-meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
 .party-no-sheet  { font-size: 12px; color: var(--muted); font-style: italic; }
+.party-dm-badge  { font-size: 9px; background: var(--gold); color: #000; border-radius: 3px; padding: 1px 4px; margin-left: 6px; font-weight: 700; vertical-align: middle; }
 
 .party-vitals {
   display: flex;
