@@ -13,6 +13,7 @@ export default function MapPanel({ map, isDM, players = [], npcs = [] }) {
   const [mode,          setMode]          = useState('reveal')
   const [paintType,     setPaintType]     = useState('wall')
   const [selectedToken, setSelectedToken] = useState(null)
+  const [collapsed,     setCollapsed]     = useState(false)
   const dragRef = useRef({ active: false, revealTarget: null })
 
   useEffect(() => {
@@ -28,6 +29,19 @@ export default function MapPanel({ map, isDM, players = [], npcs = [] }) {
         <button className="btn btn-ghost" onClick={() => socket.emit('map:create')}>
           + Create Map
         </button>
+      </div>
+    )
+  }
+
+  if (collapsed) {
+    return (
+      <div className="map-section">
+        <div className="map-header">
+          <span className="section-title" style={{ marginBottom: 0, borderBottom: 'none' }}>Map</span>
+          <button className="btn btn-icon" style={{ marginLeft: 'auto' }} onClick={() => setCollapsed(false)}>
+            Show Map ▼
+          </button>
+        </div>
       </div>
     )
   }
@@ -72,6 +86,9 @@ export default function MapPanel({ map, isDM, players = [], npcs = [] }) {
     <div className="map-section">
       <div className="map-header">
         <span className="section-title" style={{ marginBottom: 0, borderBottom: 'none' }}>Map</span>
+        <button className="btn btn-icon" style={{ marginLeft: isDM ? undefined : 'auto' }} onClick={() => setCollapsed(true)}>
+          Hide ▲
+        </button>
         {isDM && (
           <div className="map-toolbar">
             <button className={`btn btn-icon${mode === 'paint'  ? ' map-mode-active' : ''}`} onClick={() => setMode('paint')}>Paint</button>
