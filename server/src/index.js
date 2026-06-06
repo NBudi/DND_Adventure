@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const { getOrCreate, removePlayer, addToLog } = require('./rooms');
+const { getOrCreate, removePlayer, addToLog, defaultMap } = require('./rooms');
 const { parseAndRoll } = require('./dice');
 const { validateLogin, signUp, getPlayerName } = require('./auth');
 const { getCharacter, saveCharacter, getAllCharacters } = require('./characters');
@@ -75,7 +75,7 @@ io.on('connection', (socket) => {
     socket.join(code);
     room.players.push(name);
 
-    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm });
+    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm, map: room.map });
     socket.to(code).emit('system', { msg: `${name} joined the room`, players: room.players, ts: ts() });
   });
 
@@ -96,6 +96,45 @@ io.on('connection', (socket) => {
     } catch (err) {
       socket.emit('error', { msg: err.message });
     }
+  });
+
+  // ── Map events ───────────────────────────────
+
+  socket.on('map:create', () => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName || room.map) return;
+    room.map = defaultMap();
+    io.to(currentRoom).emit('map:state', room.map);
+  });
+
+  socket.on('map:set-cell', ({ index, type }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName || !room.map) return;
+    const i = Number(index);
+    if (!Number.isInteger(i) || i < 0 || i >= room.map.cells.length) return;
+    if (!['floor', 'wall'].includes(type)) return;
+    room.map.cells[i].type = type;
+    io.to(currentRoom).emit('map:state', room.map);
+  });
+
+  socket.on('map:reveal-cell', ({ index, revealed }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName || !room.map) return;
+    const i = Number(index);
+    if (!Number.isInteger(i) || i < 0 || i >= room.map.cells.length) return;
+    room.map.cells[i].revealed = Boolean(revealed);
+    io.to(currentRoom).emit('map:state', room.map);
+  });
+
+  socket.on('map:reset', () => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName || !room.map) return;
+    room.map = defaultMap();
+    io.to(currentRoom).emit('map:state', room.map);
   });
 
   // ── DM events ────────────────────────────────

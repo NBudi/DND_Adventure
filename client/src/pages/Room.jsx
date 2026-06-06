@@ -6,6 +6,7 @@ import DiceRoller from '../components/DiceRoller'
 import RollLog from '../components/RollLog'
 import DMPanel from '../components/DMPanel'
 import CharacterModal from '../components/CharacterModal'
+import MapPanel from '../components/MapPanel'
 
 export default function Room() {
   const { code }      = useParams()
@@ -24,6 +25,7 @@ export default function Room() {
   const [lastTotal,   setLastTotal]   = useState(null)
   const [characters,  setCharacters]  = useState({})
   const [viewingChar, setViewingChar] = useState(null)
+  const [map,         setMap]         = useState(null)
 
   const joined    = useRef(false)
   const myNameRef = useRef(requestedName)
@@ -35,24 +37,25 @@ export default function Room() {
     socket.connect()
     socket.emit('join', { roomCode, playerName: requestedName })
 
-    socket.on('init', ({ you, players, log, dm }) => {
+    socket.on('init', ({ you, players, log, dm, map }) => {
       setMyName(you)
       myNameRef.current = you
       setPlayers(players)
       setLog(log)
       setDmName(dm)
       if (dm === you) setIsDM(true)
+      setMap(map)
 
       const myUsername = sessionStorage.getItem('playerUsername')
       fetch('/api/characters')
         .then(r => r.json())
         .then(list => {
-          const map = {}
-          list.forEach(c => { if (c.playerName) map[c.playerName] = c })
+          const charMap = {}
+          list.forEach(c => { if (c.playerName) charMap[c.playerName] = c })
           // Ensure own character is mapped to actual room name (handles display-name mismatches)
           const mine = list.find(c => c.username === myUsername)
-          if (mine) map[you] = mine
-          setCharacters(map)
+          if (mine) charMap[you] = mine
+          setCharacters(charMap)
         })
         .catch(() => {})
     })
@@ -83,6 +86,8 @@ export default function Room() {
 
     socket.on('log:cleared', () => setLog([]))
 
+    socket.on('map:state', setMap)
+
     socket.on('error', ({ msg }) => setError(msg))
 
     return () => {
@@ -93,6 +98,7 @@ export default function Room() {
       socket.off('roll:hidden')
       socket.off('hidden-removed')
       socket.off('log:cleared')
+      socket.off('map:state')
       socket.off('error')
       socket.disconnect()
       joined.current = false
@@ -179,6 +185,8 @@ export default function Room() {
           <RollLog entries={log} myName={myName} />
         </section>
       </div>
+
+      {(isDM || map) && <MapPanel map={map} isDM={isDM} />}
     </div>
   )
 }
