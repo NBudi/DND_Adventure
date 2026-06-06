@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { getOrCreate, removePlayer, addToLog } = require('./rooms');
 const { parseAndRoll } = require('./dice');
-const { validateLogin } = require('./auth');
+const { validateLogin, signUp } = require('./auth');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,12 +16,19 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ ok: false, error: 'Missing credentials' });
-  const name = validateLogin(username, password);
+  const name = await validateLogin(username, password);
   if (name) return res.json({ ok: true, name });
   res.status(401).json({ ok: false, error: 'Invalid username or password' });
+});
+
+app.post('/api/signup', async (req, res) => {
+  const { username, password, name } = req.body || {};
+  const result = await signUp(username, password, name);
+  if (result.ok) res.json(result);
+  else res.status(400).json(result);
 });
 
 // In production, serve the built React app
