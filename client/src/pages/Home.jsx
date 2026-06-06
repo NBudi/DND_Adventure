@@ -9,16 +9,20 @@ function randomCode() {
 }
 
 export default function Home() {
-  const [name, setName] = useState('')
   const [code, setCode] = useState(randomCode)
   const navigate = useNavigate()
+  const playerName = sessionStorage.getItem('playerName') || 'Adventurer'
 
   function handleSubmit(e) {
     e.preventDefault()
-    const n = name.trim()
     const c = code.trim().toUpperCase()
-    if (!n || !c) return
-    navigate(`/room/${c}?name=${encodeURIComponent(n)}`)
+    if (!c) return
+    navigate(`/room/${c}`)
+  }
+
+  function logout() {
+    sessionStorage.removeItem('playerName')
+    navigate('/login')
   }
 
   return (
@@ -29,22 +33,11 @@ export default function Home() {
           <p>Roll dice together, live</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="name">Your Name</label>
-            <input
-              className="input"
-              id="name"
-              type="text"
-              placeholder="Adventurer"
-              maxLength={20}
-              required
-              autoComplete="off"
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </div>
+        <p style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          Playing as <strong>{playerName}</strong>
+        </p>
 
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label" htmlFor="code">Room Code</label>
             <div className="code-row">
@@ -71,6 +64,15 @@ export default function Home() {
             Enter the Room
           </button>
         </form>
+
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ width: '100%', marginTop: '0.75rem' }}
+          onClick={logout}
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   )

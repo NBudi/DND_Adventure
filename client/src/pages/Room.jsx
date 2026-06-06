@@ -1,15 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import socket from '../socket'
 import PlayerList from '../components/PlayerList'
 import DiceRoller from '../components/DiceRoller'
 import RollLog from '../components/RollLog'
 
 export default function Room() {
-  const { code }        = useParams()
-  const [searchParams]  = useSearchParams()
-  const requestedName   = searchParams.get('name') || 'Adventurer'
-  const roomCode        = code.toUpperCase()
+  const { code }      = useParams()
+  const navigate      = useNavigate()
+  const requestedName = sessionStorage.getItem('playerName') || 'Adventurer'
+  const roomCode      = code.toUpperCase()
 
   const [myName,  setMyName]  = useState(requestedName)
   const [players, setPlayers] = useState([])
@@ -17,7 +17,6 @@ export default function Room() {
   const [error,   setError]   = useState('')
   const [copied,  setCopied]  = useState(false)
 
-  // Guard against React StrictMode double-mount in dev
   const joined = useRef(false)
 
   useEffect(() => {
@@ -67,6 +66,12 @@ export default function Room() {
     } catch {}
   }
 
+  function logout() {
+    socket.disconnect()
+    sessionStorage.removeItem('playerName')
+    navigate('/login')
+  }
+
   return (
     <div className="room-body">
       <header className="header">
@@ -81,6 +86,7 @@ export default function Room() {
           Playing as <strong>{myName}</strong>
         </div>
         <Link to="/" className="btn btn-ghost">Leave</Link>
+        <button className="btn btn-ghost" onClick={logout}>Sign Out</button>
       </header>
 
       <div className="room-layout">

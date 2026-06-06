@@ -1,13 +1,21 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Login from './pages/Login'
 import Home from './pages/Home'
 import Room from './pages/Room'
+
+function RequireAuth({ children }) {
+  return sessionStorage.getItem('playerName')
+    ? children
+    : <Navigate to="/login" replace />
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/room/:code" element={<Room />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
+        <Route path="/room/:code" element={<RequireAuth><Room /></RequireAuth>} />
       </Routes>
     </BrowserRouter>
   )
