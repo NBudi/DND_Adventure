@@ -23,12 +23,14 @@ function getOrCreate(code) {
     map: null,
     npcs: [],
     npcCounter: 0,
+    playerChars: {},
   };
   return rooms[code];
 }
 
 function removePlayer(room, name) {
   room.players = room.players.filter(p => p !== name);
+  delete room.playerChars[name];
   if (room.dm === name) {
     room.dm = null;
     room.hiddenLog = [];

@@ -9,14 +9,14 @@ function skillLabel(key) {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())
 }
 
-export default function PartyPanel({ players, dmName, characters }) {
+export default function PartyPanel({ players, dmName, playerChars = {} }) {
   if (players.length === 0) return null
 
   return (
     <div className="panel-party">
       <div className="section-title">Party</div>
       {players.map(name => {
-        const char = characters[name]
+        const char = playerChars[name]
         if (!char) return (
           <div key={name} className="party-card">
             <div className="party-card-name">

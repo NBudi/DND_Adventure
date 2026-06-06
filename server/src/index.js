@@ -4,8 +4,8 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { getOrCreate, removePlayer, addToLog, defaultMap, NPC_COLORS } = require('./rooms');
 const { parseAndRoll } = require('./dice');
-const { validateLogin, signUp, getPlayerName } = require('./auth');
-const { getCharacter, saveCharacter, getAllCharacters } = require('./characters');
+const { validateLogin, signUp } = require('./auth');
+const { getCharacters, saveCharacters } = require('./characters');
 
 const app = express();
 const server = http.createServer(app);
@@ -30,23 +30,15 @@ app.post('/api/signup', async (req, res) => {
   else res.status(400).json(result);
 });
 
-app.get('/api/characters', async (_req, res) => {
-  const chars = await getAllCharacters();
-  const enriched = await Promise.all(chars.map(async c => ({
-    ...c,
-    playerName: await getPlayerName(c.username),
-  })));
-  res.json(enriched);
+app.get('/api/characters/:username', async (req, res) => {
+  const chars = await getCharacters(req.params.username);
+  res.json(chars);
 });
 
-app.get('/api/character/:username', async (req, res) => {
-  const char = await getCharacter(req.params.username);
-  if (char) res.json(char);
-  else res.status(404).json({});
-});
-
-app.post('/api/character/:username', async (req, res) => {
-  await saveCharacter(req.params.username, req.body);
+app.post('/api/characters/:username', async (req, res) => {
+  const chars = req.body;
+  if (!Array.isArray(chars) || chars.length > 3) return res.status(400).json({ ok: false, error: 'Invalid' });
+  await saveCharacters(req.params.username, chars);
   res.json({ ok: true });
 });
 
@@ -60,7 +52,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let currentName = null;
 
-  socket.on('join', ({ roomCode, playerName }) => {
+  socket.on('join', ({ roomCode, playerName, character }) => {
     const code = String(roomCode).toUpperCase().slice(0, 8);
     const room = getOrCreate(code);
 
@@ -74,9 +66,10 @@ io.on('connection', (socket) => {
 
     socket.join(code);
     room.players.push(name);
+    room.playerChars[name] = sanitizeChar(character);
 
-    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm, map: room.map, npcs: room.npcs });
-    socket.to(code).emit('system', { msg: `${name} joined the room`, players: room.players, ts: ts() });
+    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm, map: room.map, npcs: room.npcs, playerChars: room.playerChars });
+    socket.to(code).emit('system', { msg: `${name} joined the room`, players: room.players, ts: ts(), playerChars: room.playerChars });
   });
 
   socket.on('roll', ({ notation, npcName }) => {
@@ -267,13 +260,30 @@ io.on('connection', (socket) => {
       if (changed) io.to(currentRoom).emit('map:state', room.map);
     }
     removePlayer(room, currentName);
-    io.to(currentRoom).emit('system', { msg: `${currentName} left the room`, players: room.players, ts: ts() });
+    io.to(currentRoom).emit('system', { msg: `${currentName} left the room`, players: room.players, ts: ts(), playerChars: room.playerChars });
     if (wasDM) io.to(currentRoom).emit('dm-update', { dm: null, players: room.players });
   });
 });
 
 function ts() {
   return new Date().toTimeString().slice(0, 8);
+}
+
+function sanitizeChar(c) {
+  if (!c || typeof c !== 'object') return null;
+  return {
+    id: Number(c.id) || 0,
+    characterName: String(c.characterName || '').trim().slice(0, 50),
+    race:  String(c.race  || '').slice(0, 20),
+    class: String(c.class || '').slice(0, 20),
+    level: Math.min(20, Math.max(1, Number(c.level) || 1)),
+    hp:    { current: Number(c.hp?.current) || 0, max: Math.max(1, Number(c.hp?.max) || 1) },
+    ac:    Math.max(1, Number(c.ac) || 10),
+    stats: Object.fromEntries(
+      ['str','dex','con','int','wis','cha'].map(s => [s, Math.min(30, Math.max(1, Number(c.stats?.[s]) || 10))])
+    ),
+    skills: Object.fromEntries(Object.entries(c.skills || {}).map(([k, v]) => [k, Boolean(v)])),
+  };
 }
 
 server.listen(PORT, () => console.log(`Server running → http://localhost:${PORT}`));

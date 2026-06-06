@@ -25,7 +25,7 @@ export default function Room() {
   const [isDM,        setIsDM]        = useState(false)
   const [hiddenRolls, setHiddenRolls] = useState([])
   const [lastTotal,   setLastTotal]   = useState(null)
-  const [characters,  setCharacters]  = useState({})
+  const [playerChars, setPlayerChars] = useState({})
   const [viewingChar, setViewingChar] = useState(null)
   const [map,         setMap]         = useState(null)
   const [npcs,        setNpcs]        = useState([])
@@ -37,10 +37,25 @@ export default function Room() {
     if (joined.current) return
     joined.current = true
 
-    socket.connect()
-    socket.emit('join', { roomCode, playerName: requestedName })
+    // Fetch selected character then connect
+    const username      = sessionStorage.getItem('playerUsername')
+    const selectedCharId = sessionStorage.getItem('selectedCharId')
+    async function connect() {
+      let character = null
+      if (username) {
+        try {
+          const list = await fetch(`/api/characters/${username}`).then(r => r.json())
+          if (Array.isArray(list)) {
+            character = list.find(c => String(c.id) === selectedCharId) || list[0] || null
+          }
+        } catch {}
+      }
+      socket.connect()
+      socket.emit('join', { roomCode, playerName: requestedName, character })
+    }
+    connect()
 
-    socket.on('init', ({ you, players, log, dm, map, npcs }) => {
+    socket.on('init', ({ you, players, log, dm, map, npcs, playerChars }) => {
       setMyName(you)
       myNameRef.current = you
       setPlayers(players)
@@ -48,30 +63,17 @@ export default function Room() {
       setDmName(dm)
       setMap(map)
       setNpcs(npcs || [])
+      setPlayerChars(playerChars || {})
 
       localStorage.setItem('dndRoom', roomCode)
 
       if (dm === you) {
         setIsDM(true)
       } else if (!dm && localStorage.getItem('dndIsDM') === 'true') {
-        // Auto-reclaim DM after refresh if slot is empty
         socket.emit('claim-dm')
         setIsDM(true)
         setDmName(you)
       }
-
-      const myUsername = sessionStorage.getItem('playerUsername')
-      fetch('/api/characters')
-        .then(r => r.json())
-        .then(list => {
-          const charMap = {}
-          list.forEach(c => { if (c.playerName) charMap[c.playerName] = c })
-          // Ensure own character is mapped to actual room name (handles display-name mismatches)
-          const mine = list.find(c => c.username === myUsername)
-          if (mine) charMap[you] = mine
-          setCharacters(charMap)
-        })
-        .catch(() => {})
     })
 
     socket.on('roll:result', entry => {
@@ -79,15 +81,15 @@ export default function Room() {
       if (entry.player === myNameRef.current) setLastTotal(entry.total)
     })
 
-    socket.on('system', ({ msg, players, ts, type }) => {
+    socket.on('system', ({ msg, players, ts, type, playerChars }) => {
       if (players) setPlayers(players)
+      if (playerChars) setPlayerChars(playerChars)
       setLog(prev => [...prev, { type: type || 'system', msg, ts }])
     })
 
     socket.on('dm-update', ({ dm, players }) => {
       setDmName(dm)
       setPlayers(players)
-      setIsDM(prev => prev)  // isDM only set by own claim
     })
 
     socket.on('roll:hidden', entry => {
@@ -100,10 +102,8 @@ export default function Room() {
     })
 
     socket.on('log:cleared', () => setLog([]))
-
     socket.on('map:state', setMap)
     socket.on('npc:state', setNpcs)
-
     socket.on('error', ({ msg }) => setError(msg))
 
     return () => {
@@ -161,6 +161,8 @@ export default function Room() {
   function logout() {
     socket.disconnect()
     sessionStorage.removeItem('playerName')
+    sessionStorage.removeItem('playerUsername')
+    sessionStorage.removeItem('selectedCharId')
     localStorage.removeItem('dndRoom')
     localStorage.removeItem('dndIsDM')
     navigate('/login')
@@ -189,7 +191,13 @@ export default function Room() {
 
       <div className="room-layout">
         <aside className="panel-left">
-          <PlayerList players={players} myName={myName} dmName={dmName} characters={characters} onViewChar={setViewingChar} />
+          <PlayerList
+            players={players}
+            myName={myName}
+            dmName={dmName}
+            playerChars={playerChars}
+            onViewChar={setViewingChar}
+          />
 
           {!dmName && !isDM && (
             <div className="section">
@@ -210,7 +218,7 @@ export default function Room() {
           />
         </aside>
 
-        <PartyPanel players={players} dmName={dmName} characters={characters} />
+        <PartyPanel players={players} dmName={dmName} playerChars={playerChars} />
 
         <section className="panel-right">
           <div className="log-header">
