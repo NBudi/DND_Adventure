@@ -1,6 +1,10 @@
-# Core dependencies
-rich>=13.0.0          # Beautiful terminal output
-colorama>=0.4.6       # Cross-platform terminal colors
+# Server
+fastapi[standard]>=0.115.0
+uvicorn[standard]>=0.32.0
+websockets>=13.0
 
-# Optional AI integration
-anthropic>=0.55.0     # Claude API for NPC dialogue / DM narration
+# Terminal / UI utilities
+rich>=13.0.0
+
+# Optional: AI-driven DM narration
+# anthropic>=0.55.0

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DND Adventure</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="room-body">
+
+  <header class="header">
+    <div class="room-info">
+      <span class="label">Room</span>
+      <span class="room-code" id="room-code">----</span>
+      <button class="btn btn-icon" id="copy-btn">Copy</button>
+    </div>
+    <div class="player-badge">
+      Playing as <strong id="player-display">...</strong>
+    </div>
+    <a href="/" class="btn btn-ghost">Leave</a>
+  </header>
+
+  <div class="room-layout">
+
+    <!-- Left panel: players + dice roller -->
+    <aside class="panel-left">
+      <section class="section">
+        <div class="section-title">Players Online</div>
+        <ul class="player-list" id="player-list">
+          <li class="player-item" style="color:var(--text-muted);font-style:italic">Connecting...</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Roll Dice</div>
+        <div class="dice-grid" id="dice-grid"></div>
+
+        <form class="roll-form" id="roll-form">
+          <input class="input" id="notation-input" type="text"
+                 placeholder="e.g. 2d6+3" autocomplete="off" spellcheck="false">
+          <button type="submit" class="btn btn-primary">Roll</button>
+        </form>
+
+        <div class="error-msg" id="error-msg"></div>
+      </section>
+    </aside>
+
+    <!-- Right panel: roll log -->
+    <section class="panel-right">
+      <div class="log-header">
+        <div class="section-title" style="margin-bottom:0;border-bottom:none">Roll Log</div>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </section>
+
+  </div>
+
+  <script>
+    // ── Read URL context ───────────────────────────────────────────
+    const pathParts = location.pathname.split('/');
+    const roomCode  = pathParts[pathParts.length - 1].toUpperCase();
+    const params    = new URLSearchParams(location.search);
+    const requested = (params.get('name') || 'Adventurer').slice(0, 20);
+
+    let myName = requested;
+
+    document.getElementById('room-code').textContent   = roomCode;
+    document.getElementById('player-display').textContent = requested;
+    document.title = `${roomCode} — DND Adventure`;
+
+    // ── WebSocket ──────────────────────────────────────────────────
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(
+      `${proto}//${location.host}/ws/${roomCode}/${encodeURIComponent(requested)}`
+    );
+
+    ws.onclose = () => addSystem('Connection lost. Refresh to reconnect.');
+
+    ws.onmessage = ({ data }) => {
+      const msg = JSON.parse(data);
+      switch (msg.type) {
+        case 'init':
+          myName = msg.you;
+          document.getElementById('player-display').textContent = myName;
+          updatePlayers(msg.players);
+          msg.log.forEach(addRollEntry);
+          scrollLog();
+          break;
+        case 'roll':
+          addRollEntry(msg);
+          scrollLog();
+          break;
+        case 'system':
+          if (msg.players) updatePlayers(msg.players);
+          addSystem(msg.msg, msg.ts);
+          scrollLog();
+          break;
+        case 'error':
+          showError(msg.msg);
+          break;
+      }
+    };
+
+    // ── Dice buttons ───────────────────────────────────────────────
+    [4, 6, 8, 10, 12, 20, 100].forEach(sides => {
+      const btn = document.createElement('button');
+      btn.className   = 'btn btn-dice';
+      btn.textContent = `d${sides}`;
+      btn.type        = 'button';
+      btn.addEventListener('click', () => sendRoll(`1d${sides}`));
+      document.getElementById('dice-grid').appendChild(btn);
+    });
+
+    // ── Custom notation form ───────────────────────────────────────
+    document.getElementById('roll-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const el  = document.getElementById('notation-input');
+      const val = el.value.trim();
+      if (val) { sendRoll(val); el.value = ''; }
+    });
+
+    // ── Copy room code ─────────────────────────────────────────────
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(roomCode);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      } catch {}
+    });
+
+    // ── Helpers ────────────────────────────────────────────────────
+    function sendRoll(notation) {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      clearError();
+      ws.send(JSON.stringify({ type: 'roll', notation }));
+    }
+
+    function addRollEntry(msg) {
+      const isMe    = msg.player === myName;
+      const isCrit  = msg.sides === 20 && msg.rolls && msg.rolls.includes(20);
+      const isFumble= msg.sides === 20 && msg.rolls && msg.rolls.includes(1);
+
+      const div = document.createElement('div');
+      div.className = ['log-entry', isMe && 'mine', isCrit && 'crit', isFumble && 'fumble']
+        .filter(Boolean).join(' ');
+
+      div.innerHTML =
+        `<span class="ts">${esc(msg.ts)}</span>` +
+        `<span class="log-player">${esc(msg.player)}</span>` +
+        `<span class="log-action"> rolled </span>` +
+        `<span class="log-notation">${esc(msg.notation)}</span>` +
+        `<span class="log-arrow"> &rarr; </span>` +
+        `<span class="log-total">${msg.total}</span>` +
+        (msg.breakdown
+          ? `<span class="log-breakdown"> (${esc(msg.breakdown)})</span>`
+          : '') +
+        (isCrit   ? `<span class="crit-badge">CRITICAL HIT</span>` : '') +
+        (isFumble ? `<span class="fumble-badge">FUMBLE</span>` : '');
+
+      document.getElementById('log-body').appendChild(div);
+    }
+
+    function addSystem(text, ts) {
+      const div = document.createElement('div');
+      div.className = 'log-entry system';
+      div.innerHTML = (ts ? `<span class="ts">${esc(ts)}</span>` : '') +
+                      `<span>${esc(text)}</span>`;
+      document.getElementById('log-body').appendChild(div);
+    }
+
+    function updatePlayers(players) {
+      document.getElementById('player-list').innerHTML = players.map(p =>
+        `<li class="player-item ${p === myName ? 'me' : ''}">` +
+        `<span class="online-dot"></span>${esc(p)}${p === myName ? ' (you)' : ''}` +
+        `</li>`
+      ).join('');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function clearError() {
+      document.getElementById('error-msg').style.display = 'none';
+    }
+
+    function scrollLog() {
+      const el = document.getElementById('log-body');
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function esc(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
