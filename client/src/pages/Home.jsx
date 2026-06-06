@@ -9,7 +9,8 @@ function randomCode() {
 }
 
 export default function Home() {
-  const [code, setCode] = useState(randomCode)
+  const savedRoom = localStorage.getItem('dndRoom')
+  const [code, setCode] = useState(() => savedRoom || randomCode())
   const navigate = useNavigate()
   const playerName = sessionStorage.getItem('playerName') || 'Adventurer'
 
@@ -22,6 +23,8 @@ export default function Home() {
 
   function logout() {
     sessionStorage.removeItem('playerName')
+    localStorage.removeItem('dndRoom')
+    localStorage.removeItem('dndIsDM')
     navigate('/login')
   }
 

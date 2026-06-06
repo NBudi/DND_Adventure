@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import socket from '../socket'
 import PlayerList from '../components/PlayerList'
 import DiceRoller from '../components/DiceRoller'
@@ -45,9 +45,19 @@ export default function Room() {
       setPlayers(players)
       setLog(log)
       setDmName(dm)
-      if (dm === you) setIsDM(true)
       setMap(map)
       setNpcs(npcs || [])
+
+      localStorage.setItem('dndRoom', roomCode)
+
+      if (dm === you) {
+        setIsDM(true)
+      } else if (!dm && localStorage.getItem('dndIsDM') === 'true') {
+        // Auto-reclaim DM after refresh if slot is empty
+        socket.emit('claim-dm')
+        setIsDM(true)
+        setDmName(you)
+      }
 
       const myUsername = sessionStorage.getItem('playerUsername')
       fetch('/api/characters')
@@ -131,6 +141,7 @@ export default function Room() {
     socket.emit('claim-dm')
     setIsDM(true)
     setDmName(myName)
+    localStorage.setItem('dndIsDM', 'true')
   }
 
   async function copyCode() {
@@ -141,9 +152,16 @@ export default function Room() {
     } catch {}
   }
 
+  function leave() {
+    localStorage.removeItem('dndIsDM')
+    navigate('/')
+  }
+
   function logout() {
     socket.disconnect()
     sessionStorage.removeItem('playerName')
+    localStorage.removeItem('dndRoom')
+    localStorage.removeItem('dndIsDM')
     navigate('/login')
   }
 
@@ -164,7 +182,7 @@ export default function Room() {
           )}
         </div>
         <div className="player-badge">Playing as <strong>{myName}</strong></div>
-        <Link to="/" className="btn btn-ghost">Leave</Link>
+        <button className="btn btn-ghost" onClick={leave}>Leave</button>
         <button className="btn btn-ghost" onClick={logout}>Sign Out</button>
       </header>
 
