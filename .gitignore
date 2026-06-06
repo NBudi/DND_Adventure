@@ -31,3 +31,7 @@ Thumbs.db
 
 # Game saves
 saves/*.json
+
+# Node
+node_modules/
+client/dist/
