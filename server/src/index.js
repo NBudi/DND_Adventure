@@ -9,9 +9,7 @@ const { getCharacter, saveCharacter, getAllCharacters } = require('./characters'
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' },
-});
+const io = new Server(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3001;
 
@@ -47,7 +45,6 @@ app.post('/api/character/:username', async (req, res) => {
   res.json({ ok: true });
 });
 
-// In production, serve the built React app
 if (process.env.NODE_ENV === 'production') {
   const dist = path.join(__dirname, '../../client/dist');
   app.use(express.static(dist));
@@ -62,7 +59,6 @@ io.on('connection', (socket) => {
     const code = String(roomCode).toUpperCase().slice(0, 8);
     const room = getOrCreate(code);
 
-    // Resolve name collision
     let name = String(playerName || '').trim().slice(0, 20) || 'Adventurer';
     const base = name;
     let i = 2;
@@ -74,31 +70,21 @@ io.on('connection', (socket) => {
     socket.join(code);
     room.players.push(name);
 
-    // Send full state to the newcomer
-    socket.emit('init', { you: name, players: room.players, log: room.log });
-
-    // Announce to everyone else in the room
-    socket.to(code).emit('system', {
-      msg: `${name} joined the room`,
-      players: room.players,
-      ts: ts(),
-    });
+    socket.emit('init', { you: name, players: room.players, log: room.log, dm: room.dm });
+    socket.to(code).emit('system', { msg: `${name} joined the room`, players: room.players, ts: ts() });
   });
 
-  socket.on('roll', ({ notation }) => {
+  socket.on('roll', ({ notation, npcName }) => {
     if (!currentRoom || !currentName) return;
     const room = getOrCreate(currentRoom);
-
     try {
       const r = parseAndRoll(String(notation).slice(0, 50));
+      const playerLabel = (npcName && room.dm === currentName)
+        ? String(npcName).trim().slice(0, 30)
+        : currentName;
       const entry = {
-        player: currentName,
-        notation: r.notation,
-        rolls: r.rolls,
-        sides: r.sides,
-        total: r.total,
-        breakdown: r.breakdown,
-        ts: ts(),
+        player: playerLabel, notation: r.notation, rolls: r.rolls,
+        sides: r.sides, total: r.total, breakdown: r.breakdown, ts: ts(),
       };
       addToLog(room, entry);
       io.to(currentRoom).emit('roll:result', entry);
@@ -107,15 +93,78 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── DM events ────────────────────────────────
+
+  socket.on('claim-dm', () => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm) return socket.emit('error', { msg: `${room.dm} is already the DM` });
+    room.dm = currentName;
+    io.to(currentRoom).emit('dm-update', { dm: currentName, players: room.players });
+  });
+
+  socket.on('roll-hidden', ({ notation, npcName }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    try {
+      const r = parseAndRoll(String(notation).slice(0, 50));
+      const entry = {
+        id: ++room.hiddenCounter,
+        npcName: npcName?.trim().slice(0, 30) || null,
+        notation: r.notation, rolls: r.rolls, sides: r.sides,
+        total: r.total, breakdown: r.breakdown, ts: ts(),
+      };
+      room.hiddenLog.push(entry);
+      socket.emit('roll:hidden', entry);
+    } catch (err) {
+      socket.emit('error', { msg: err.message });
+    }
+  });
+
+  socket.on('reveal-roll', ({ id }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    const idx = room.hiddenLog.findIndex(e => e.id === id);
+    if (idx === -1) return;
+    const hidden = room.hiddenLog.splice(idx, 1)[0];
+    const entry = {
+      ...hidden,
+      player: hidden.npcName || `${currentName} [DM]`,
+      revealed: true,
+    };
+    addToLog(room, entry);
+    io.to(currentRoom).emit('roll:result', entry);
+    socket.emit('hidden-removed', { id });
+  });
+
+  socket.on('announce', ({ msg }) => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    const entry = { type: 'announce', msg: String(msg).trim().slice(0, 300), ts: ts() };
+    addToLog(room, entry);
+    io.to(currentRoom).emit('system', entry);
+  });
+
+  socket.on('clear-log', () => {
+    if (!currentRoom || !currentName) return;
+    const room = getOrCreate(currentRoom);
+    if (room.dm !== currentName) return;
+    room.log = [];
+    io.to(currentRoom).emit('log:cleared', { ts: ts() });
+  });
+
+  // ─────────────────────────────────────────────
+
   socket.on('disconnect', () => {
     if (!currentRoom || !currentName) return;
     const room = getOrCreate(currentRoom);
+    const wasDM = room.dm === currentName;
     removePlayer(room, currentName);
-    io.to(currentRoom).emit('system', {
-      msg: `${currentName} left the room`,
-      players: room.players,
-      ts: ts(),
-    });
+    io.to(currentRoom).emit('system', { msg: `${currentName} left the room`, players: room.players, ts: ts() });
+    if (wasDM) io.to(currentRoom).emit('dm-update', { dm: null, players: room.players });
   });
 });
 
@@ -123,6 +172,4 @@ function ts() {
   return new Date().toTimeString().slice(0, 8);
 }
 
-server.listen(PORT, () => {
-  console.log(`Server running → http://localhost:${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running → http://localhost:${PORT}`));

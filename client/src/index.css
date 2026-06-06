@@ -228,6 +228,60 @@ body {
 }
 .crit-badge   { background: rgba(255,215,0,.12); border: 1px solid var(--crit);   color: var(--crit);   }
 .fumble-badge { background: rgba(224,82,82,.12); border: 1px solid var(--fumble); color: var(--fumble); }
+.reveal-badge { background: rgba(160,100,220,.15); border: 1px solid #a064dc; color: #c89ef0; }
+
+/* Announce log entry */
+.log-entry.announce {
+  background: rgba(201,148,58,.08);
+  border-left-color: var(--gold);
+  font-style: italic;
+}
+.announce-icon { color: var(--gold); margin-right: 6px; }
+.announce-msg  { color: var(--gold-light); }
+
+/* Revealed roll */
+.log-entry.revealed { border-left-color: #a064dc; }
+
+/* DM badge in header */
+.dm-badge {
+  font-size: 12px;
+  color: var(--gold);
+  background: rgba(201,148,58,.1);
+  border: 1px solid rgba(201,148,58,.3);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+}
+.dm-crown { color: var(--gold); }
+
+/* Claim DM button */
+.btn-claim-dm { width: 100%; border-style: dashed; border-color: var(--gold); color: var(--gold); }
+.btn-claim-dm:hover { background: rgba(201,148,58,.1); }
+
+/* DM Panel */
+.dm-panel { border-top: 1px solid var(--gold); padding-top: 16px; margin-top: 8px; }
+.dm-title  { color: var(--gold) !important; }
+
+.dm-toggle { display: flex; gap: 4px; margin-bottom: 8px; }
+.dm-toggle-btn { flex: 1; font-size: 12px; padding: 6px 4px; }
+.dm-toggle-btn.active { background: var(--gold); color: #0f0e17; border-color: var(--gold); font-weight: bold; }
+
+.btn-dm       { background: #3a2060; border-color: #a064dc; color: #c89ef0; }
+.btn-dm:hover { background: #4a2880; }
+
+.dm-sub-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 10px 0 4px; }
+.dm-divider   { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+.hidden-rolls { background: rgba(58,32,96,.3); border: 1px solid #a064dc44; border-radius: var(--radius); padding: 8px; margin-top: 8px; }
+.hidden-roll-row { display: flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 0; flex-wrap: wrap; }
+.hidden-npc  { color: #c89ef0; font-style: italic; }
+.hidden-breakdown { color: var(--text-muted); font-size: 11px; font-family: 'Courier New', monospace; }
+.btn-reveal  { margin-left: auto; padding: 2px 8px; font-size: 11px; background: #3a2060; border-color: #a064dc; color: #c89ef0; }
+.btn-reveal:hover { background: #4a2880; }
+
+.dm-announce { resize: vertical; min-height: 60px; font-family: Georgia, serif; font-size: 13px; }
+
+.btn-danger       { background: rgba(224,82,82,.15); border-color: var(--fumble); color: var(--fumble); }
+.btn-danger:hover { background: rgba(224,82,82,.25); }
 
 
 /* ══ CHARACTER SHEET ════════════════════════ */

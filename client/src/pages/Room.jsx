@@ -4,6 +4,7 @@ import socket from '../socket'
 import PlayerList from '../components/PlayerList'
 import DiceRoller from '../components/DiceRoller'
 import RollLog from '../components/RollLog'
+import DMPanel from '../components/DMPanel'
 
 export default function Room() {
   const { code }      = useParams()
@@ -11,11 +12,14 @@ export default function Room() {
   const requestedName = sessionStorage.getItem('playerName') || 'Adventurer'
   const roomCode      = code.toUpperCase()
 
-  const [myName,  setMyName]  = useState(requestedName)
-  const [players, setPlayers] = useState([])
-  const [log,     setLog]     = useState([])
-  const [error,   setError]   = useState('')
-  const [copied,  setCopied]  = useState(false)
+  const [myName,      setMyName]      = useState(requestedName)
+  const [players,     setPlayers]     = useState([])
+  const [log,         setLog]         = useState([])
+  const [error,       setError]       = useState('')
+  const [copied,      setCopied]      = useState(false)
+  const [dmName,      setDmName]      = useState(null)
+  const [isDM,        setIsDM]        = useState(false)
+  const [hiddenRolls, setHiddenRolls] = useState([])
 
   const joined = useRef(false)
 
@@ -26,20 +30,36 @@ export default function Room() {
     socket.connect()
     socket.emit('join', { roomCode, playerName: requestedName })
 
-    socket.on('init', ({ you, players, log }) => {
+    socket.on('init', ({ you, players, log, dm }) => {
       setMyName(you)
       setPlayers(players)
       setLog(log)
+      setDmName(dm)
+      if (dm === you) setIsDM(true)
     })
 
-    socket.on('roll:result', entry => {
-      setLog(prev => [...prev, entry])
-    })
+    socket.on('roll:result', entry => setLog(prev => [...prev, entry]))
 
-    socket.on('system', ({ msg, players, ts }) => {
+    socket.on('system', ({ msg, players, ts, type }) => {
       if (players) setPlayers(players)
-      setLog(prev => [...prev, { type: 'system', msg, ts }])
+      setLog(prev => [...prev, { type: type || 'system', msg, ts }])
     })
+
+    socket.on('dm-update', ({ dm, players }) => {
+      setDmName(dm)
+      setPlayers(players)
+      setIsDM(prev => prev)  // isDM only set by own claim
+    })
+
+    socket.on('roll:hidden', entry => {
+      setHiddenRolls(prev => [...prev, entry])
+    })
+
+    socket.on('hidden-removed', ({ id }) => {
+      setHiddenRolls(prev => prev.filter(r => r.id !== id))
+    })
+
+    socket.on('log:cleared', () => setLog([]))
 
     socket.on('error', ({ msg }) => setError(msg))
 
@@ -47,6 +67,10 @@ export default function Room() {
       socket.off('init')
       socket.off('roll:result')
       socket.off('system')
+      socket.off('dm-update')
+      socket.off('roll:hidden')
+      socket.off('hidden-removed')
+      socket.off('log:cleared')
       socket.off('error')
       socket.disconnect()
       joined.current = false
@@ -56,6 +80,12 @@ export default function Room() {
   function sendRoll(notation) {
     setError('')
     socket.emit('roll', { notation })
+  }
+
+  function claimDM() {
+    socket.emit('claim-dm')
+    setIsDM(true)
+    setDmName(myName)
   }
 
   async function copyCode() {
@@ -81,18 +111,39 @@ export default function Room() {
           <button className="btn btn-icon" onClick={copyCode}>
             {copied ? 'Copied!' : 'Copy'}
           </button>
+          {dmName && (
+            <span className="dm-badge">
+              ⚔ {isDM ? 'You are DM' : `${dmName} is DM`}
+            </span>
+          )}
         </div>
-        <div className="player-badge">
-          Playing as <strong>{myName}</strong>
-        </div>
+        <div className="player-badge">Playing as <strong>{myName}</strong></div>
         <Link to="/" className="btn btn-ghost">Leave</Link>
         <button className="btn btn-ghost" onClick={logout}>Sign Out</button>
       </header>
 
       <div className="room-layout">
         <aside className="panel-left">
-          <PlayerList players={players} myName={myName} />
-          <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} />
+          <PlayerList players={players} myName={myName} dmName={dmName} />
+
+          {!dmName && !isDM && (
+            <div className="section">
+              <button className="btn btn-ghost btn-claim-dm" onClick={claimDM}>
+                ⚔ Claim DM Role
+              </button>
+            </div>
+          )}
+
+          {isDM
+            ? <DMPanel hiddenRolls={hiddenRolls} />
+            : <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} />
+          }
+
+          {isDM && (
+            <div className="section">
+              <DiceRoller onRoll={sendRoll} error={error} onClearError={() => setError('')} />
+            </div>
+          )}
         </aside>
 
         <section className="panel-right">

@@ -1,4 +1,4 @@
-export default function PlayerList({ players, myName }) {
+export default function PlayerList({ players, myName, dmName }) {
   return (
     <section className="section">
       <div className="section-title">Players Online</div>
@@ -7,6 +7,7 @@ export default function PlayerList({ players, myName }) {
           <li key={p} className={`player-item${p === myName ? ' me' : ''}`}>
             <span className="online-dot" />
             {p}{p === myName ? ' (you)' : ''}
+            {p === dmName && <span className="dm-crown"> ⚔</span>}
           </li>
         ))}
       </ul>
