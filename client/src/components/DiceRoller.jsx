@@ -7,6 +7,7 @@ export default function DiceRoller({ onRoll, error, onClearError, lastTotal }) {
   const [rolling,   setRolling]   = useState(false)
   const [cooldown,  setCooldown]  = useState(0)
   const [dispNum,   setDispNum]   = useState(20)
+  const [settled,   setSettled]   = useState(false)
   const cycleRef      = useRef(null)
   const cooldownRef   = useRef(null)
   const lastTotalRef  = useRef(null)
@@ -24,7 +25,8 @@ export default function DiceRoller({ onRoll, error, onClearError, lastTotal }) {
     lastTotalRef.current = null   // clear stale result from previous roll
     onRoll(notation)
 
-    // Cycle numbers rapidly for 1.4 s, then snap to actual result
+    // Cycle numbers rapidly for 1.4 s, then snap to actual result and stop
+    setSettled(false)
     setDispNum(Math.ceil(Math.random() * 20))
     cycleRef.current = setInterval(() => {
       setDispNum(Math.ceil(Math.random() * 20))
@@ -32,6 +34,7 @@ export default function DiceRoller({ onRoll, error, onClearError, lastTotal }) {
     setTimeout(() => {
       clearInterval(cycleRef.current)
       if (lastTotalRef.current !== null) setDispNum(lastTotalRef.current)
+      setSettled(true)
     }, 1400)
 
     // 3-second cooldown countdown
@@ -59,7 +62,7 @@ export default function DiceRoller({ onRoll, error, onClearError, lastTotal }) {
       <div className="section-title">Roll Dice</div>
 
       <div className={`dice-anim-wrap${rolling ? ' rolling' : ''}`}>
-        <div className="dice-face">{dispNum}</div>
+        <div className={`dice-face${settled ? ' settled' : ''}`}>{dispNum}</div>
       </div>
 
       <div className="dice-grid">

@@ -194,6 +194,7 @@ body {
   box-shadow: 0 0 12px rgba(201,148,58,.25);
 }
 .dice-anim-wrap:not(.rolling) .dice-face { animation: none; }
+.dice-face.settled { animation: none; }
 
 @keyframes dice-wobble {
   0%   { transform: rotate(-10deg) scale(0.95); }
