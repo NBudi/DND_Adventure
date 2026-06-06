@@ -21,6 +21,7 @@ export default function Login() {
       const data = await res.json()
       if (data.ok) {
         sessionStorage.setItem('playerName', data.name)
+        sessionStorage.setItem('playerUsername', data.username)
         navigate('/')
       } else {
         setError(data.error || 'Invalid credentials')

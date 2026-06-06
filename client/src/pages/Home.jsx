@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 function randomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -65,10 +65,19 @@ export default function Home() {
           </button>
         </form>
 
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <Link to="/character" className="btn btn-ghost" style={{ flex: 1, textAlign: 'center' }}>
+            My Character
+          </Link>
+          <Link to="/players" className="btn btn-ghost" style={{ flex: 1, textAlign: 'center' }}>
+            The Party
+          </Link>
+        </div>
+
         <button
           type="button"
           className="btn btn-ghost"
-          style={{ width: '100%', marginTop: '0.75rem' }}
+          style={{ width: '100%', marginTop: '0.5rem' }}
           onClick={logout}
         >
           Sign Out

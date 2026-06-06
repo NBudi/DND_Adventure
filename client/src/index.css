@@ -228,3 +228,97 @@ body {
 }
 .crit-badge   { background: rgba(255,215,0,.12); border: 1px solid var(--crit);   color: var(--crit);   }
 .fumble-badge { background: rgba(224,82,82,.12); border: 1px solid var(--fumble); color: var(--fumble); }
+
+
+/* ══ CHARACTER SHEET ════════════════════════ */
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.sheet-content {
+  padding: 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.save-btn {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 12px;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+/* Character card */
+.char-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.char-header { margin-bottom: 20px; }
+.char-name { font-size: 24px; color: var(--gold); letter-spacing: 1px; margin-bottom: 6px; }
+.char-name-input { font-size: 20px; color: var(--gold); letter-spacing: 1px; margin-bottom: 8px; }
+.char-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.char-select { width: auto; font-size: 13px; padding: 4px 8px; }
+.char-level-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.char-level-input { width: 60px; font-size: 13px; padding: 4px 8px; }
+
+/* Vitals */
+.char-vitals { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.vital-block { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; text-align: center; min-width: 90px; }
+.vital-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
+.vital-value { font-size: 20px; font-weight: bold; color: var(--gold); }
+.vital-input { width: 64px; font-size: 16px; text-align: center; padding: 4px; }
+.hp-row { display: flex; align-items: center; gap: 4px; justify-content: center; }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.stat-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 6px;
+  text-align: center;
+}
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+.stat-mod   { font-size: 20px; font-weight: bold; color: var(--gold); margin: 4px 0; }
+.stat-score { font-size: 13px; color: var(--text-muted); }
+.stat-input { width: 100%; font-size: 14px; text-align: center; padding: 4px 2px; }
+
+/* Skills */
+.skills-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 24px;
+}
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.skill-row input[type="checkbox"] { accent-color: var(--gold); width: 14px; height: 14px; flex-shrink: 0; }
+.skill-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+.skill-dot.proficient { background: var(--gold); border-color: var(--gold); }
+.skill-bonus { font-family: 'Courier New', monospace; font-size: 12px; color: var(--gold); width: 26px; text-align: right; flex-shrink: 0; }
+.skill-name  { flex: 1; }
+.skill-stat  { color: var(--text-muted); font-size: 11px; }
+
+/* Players grid */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}

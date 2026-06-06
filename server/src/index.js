@@ -5,6 +5,7 @@ const path = require('path');
 const { getOrCreate, removePlayer, addToLog } = require('./rooms');
 const { parseAndRoll } = require('./dice');
 const { validateLogin, signUp } = require('./auth');
+const { getCharacter, saveCharacter, getAllCharacters } = require('./characters');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,7 +21,7 @@ app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ ok: false, error: 'Missing credentials' });
   const name = await validateLogin(username, password);
-  if (name) return res.json({ ok: true, name });
+  if (name) return res.json({ ok: true, name, username: username.trim().toLowerCase() });
   res.status(401).json({ ok: false, error: 'Invalid username or password' });
 });
 
@@ -29,6 +30,21 @@ app.post('/api/signup', async (req, res) => {
   const result = await signUp(username, password, name);
   if (result.ok) res.json(result);
   else res.status(400).json(result);
+});
+
+app.get('/api/characters', async (_req, res) => {
+  res.json(await getAllCharacters());
+});
+
+app.get('/api/character/:username', async (req, res) => {
+  const char = await getCharacter(req.params.username);
+  if (char) res.json(char);
+  else res.status(404).json({});
+});
+
+app.post('/api/character/:username', async (req, res) => {
+  await saveCharacter(req.params.username, req.body);
+  res.json({ ok: true });
 });
 
 // In production, serve the built React app

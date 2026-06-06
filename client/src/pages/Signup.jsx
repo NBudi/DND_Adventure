@@ -22,6 +22,7 @@ export default function Signup() {
       const data = await res.json()
       if (data.ok) {
         sessionStorage.setItem('playerName', data.name)
+        sessionStorage.setItem('playerUsername', username.trim().toLowerCase())
         navigate('/')
       } else {
         setError(data.error || 'Sign up failed')
